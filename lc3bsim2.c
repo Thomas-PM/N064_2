@@ -416,6 +416,8 @@ int handleALU(int instr, int op);
 void handleBR(int instr);
 void handleLEA(int instr);
 void handleJMP(int instr);
+void handleJSR(int instr);
+
 
 void handleTRAP(int instr);
 
@@ -457,17 +459,20 @@ void process_instruction(){
         case 12 : /* JMP */
             handleJMP(instruction);
             break;
-        case 8 : /* TODO RTI, don't do ??? */
+        case 8 : /*  RTI, don't do ??? */
             printf("RTI Called, no simmulated handler\n");
             break;
         case 4 : /* JSR */
+            
             break;
         case 2 :
         case 6 :
         case 3 :
         case 7 : /* LD/ST */
+            
             break;
         case 13 : /* SHF */
+            
             break;
         case 15 : /* TRAP */ 
             handleTRAP(instruction);
@@ -555,16 +560,55 @@ void handleBR(int instr){
 }
 
 void handleLEA(int instr){
-    int* DR = NEXT_LATCHES.REGS[ (instr >> 9) & 0x7];
+    int* DR = &NEXT_LATCHES.REGS[ (instr >> 9) & 0x7];
     *DR = NEXT_LATCHES.PC + ( sext( (instr & 0x1FF), 9) << 1);
 
 }
 
 
 void handleJMP(int instr){
-    NEXT_LATCHES.PC = (instr >> 6) & 0x7;
+    NEXT_LATCHES.PC = CURRENT_LATCHES.REG[(instr >> 6) & 0x7];
 
 }
+
+
+void handleJSR(int instr){
+    int A = (instr >> 11) & 0x1;
+    if(A){
+        NEXT_LATCH.PC = NEXT_LATCH.PC + ( (sext( (instr & 0x7FF) ,11) ) << 1);
+    }
+    else{
+        NEXT_LATCH.PC = CURRENT_LATCHES.REGS[ (instr >> 6) & 0x7];
+    }
+
+}
+
+
+void handleLDST(int instr){ 
+    int ST = (instr >> 12) & 0x1; /*  1 = store, 0 = load  */
+    int W = (intsr >> 14) &0x1; /*  1 = word, 0 = byte  */
+    int BaseR = CURRENT_LATCHES.REGS[(instr >> 6) & 0x7]; 
+    BaseR = Low16bits(BaseR);
+    int offset6 = sext( (instr & 0x3F), 6);
+    if(W){ /*  word  */
+        offset6 = offset6 << 1;
+    }
+    int address = BaseR + offset6;
+
+    if(ST){ /*  Store  */
+
+    }
+    else{ /*  Load  */
+        int* DR = &NEXT_LATCHES.REGS[ (instr >> 9) & 0x7];  
+        // TODO: Check Memory shifts for everything
+    }
+
+
+
+}
+
+
+
 
 
 void handleTRAP(int instr){
