@@ -1,3 +1,8 @@
 *~
 *.swp
 *.swo
+assembler.linux
+a.out
+dumpsim
+output.obj
+test.asm

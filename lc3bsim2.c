@@ -1,9 +1,11 @@
-EFER TO THE SUBMISSION INSTRUCTION FOR DETAILS
 
-    Name 1: Full name of the first partner 
-    Name 2: Full name of the second partner
-    UTEID 1: UT EID of the first partner
-    UTEID 2: UT EID of the second partner
+
+
+/*
+	REFER TO THE SUBMISSION INSTRUCTION FOR DETAILS
+
+    Name 1: Thomas McRoberts
+    UTEID 1: tpm627
 */
 
 /***************************************************************/
@@ -154,7 +156,7 @@ void go() {
   }
 
   printf("Simulating...\n\n");
-  while (CURRENT_LATCHES.PC != 0x0000)
+  while (CURRENT_LATCHES.PC != 0x0000) 
     cycle();
   RUN_BIT = FALSE;
   printf("Simulator halted\n\n");
@@ -403,6 +405,10 @@ int main(int argc, char *argv[]) {
 
 /***************************************************************/
 
+int fetch();
+
+
+
 
 
 void process_instruction(){
@@ -415,6 +421,37 @@ void process_instruction(){
    *       -Update NEXT_LATCHES
    */     
 
+	printf("starting process\n");
+	int instruction = fetch();
+
+
+
+	exit(0);
 }
+
+
+
+int fetch(){
+	printf("address 0x%4x\n", CURRENT_LATCHES.PC);
+	int data = 0;
+	data += MEMORY[CURRENT_LATCHES.PC >> 1][0];
+	data += MEMORY[CURRENT_LATCHES.PC >> 1][1] << 8;
+	printf("Memory = %4x", data);
+
+	return data;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
