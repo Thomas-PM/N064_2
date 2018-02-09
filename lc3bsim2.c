@@ -407,12 +407,15 @@ int main(int argc, char *argv[]) {
 
 int fetch();
 int decode(int instr);
+void setcc(int nzp);
 int sext(int num, int bits);
 
 
 
 int handleALU(int instr, int op);
-
+void handleBR(int instr);
+void handleLEA(int instr);
+void handleJMP(int instr);
 
 void handleTRAP(int instr);
 
@@ -444,13 +447,15 @@ void process_instruction(){
         case 1 :
         case 5 :
         case 9 : /* alu */
-            handleALU(instruction, opcode);
+            setcc( handleALU(instruction, opcode) );
             break;
         case 0 : /* BR */
+            handleBR(instruction);
             break;
         case 14 : /* LEA */
             break;
         case 12 : /* JMP */
+            handleJMP(instruction);
             break;
         case 8 : /* TODO RTI, don't do ??? */
             printf("RTI Called, no simmulated handler\n");
@@ -523,7 +528,7 @@ int handleALU(int instr, int op){
     if(*DR == 0){
         nzp += 2;
     }
-    if( ( (*DR) >> 15 ) == 1 ){
+    else if( ( (*DR) >> 15 ) == 1 ){
         nzp += 4;
     }
     else{
@@ -535,7 +540,29 @@ int handleALU(int instr, int op){
     #endif
     return nzp;
 
-    
+}
+
+
+void handleBR(int instr){
+    int n, z, p;
+    n = (instr >> 11) & 0x1;
+    z = (instr >> 10) & 0x1;
+    p = (instr >> 9) & 0x1;
+    if( (CURRENT_LATCHES.N && n) || (CURRENT_LATCHES.Z && z) || (CURRENT_LATCHES.P && p) ){
+        NEXT_LATCHES.PC = NEXT_LATCHES.PC + (sext( (instr & 0x1FF), 9) << 1);
+    }
+
+}
+
+void handleLEA(int instr){
+    int* DR = NEXT_LATCHES.REGS[ (instr >> 9) & 0x7];
+    *DR = NEXT_LATCHES.PC + ( sext( (instr & 0x1FF), 9) << 1);
+
+}
+
+
+void handleJMP(int instr){
+    NEXT_LATCHES.PC = (instr >> 6) & 0x7;
 
 }
 
@@ -575,6 +602,15 @@ int fetch(){
 int decode(int instr){
     return ( (instr >> 12) & 0xF);
 }
+
+
+void setcc(int nzp){
+    NEXT_LATCHES.N = ( (nzp >> 2) & 0x1);
+    NEXT_LATCHES.Z = ( (nzp >> 1) & 0x1);
+    NEXT_LATCHES.P = (nzp & 0x1);
+}
+
+
 
 
 int sext(int num, int bits){
