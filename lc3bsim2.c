@@ -39,7 +39,7 @@ void process_instruction();
 /***************************************************************/
 #define FALSE 0
 #define TRUE  1
-
+#define DEBUG 1
 /***************************************************************/
 /* Use this to avoid overflowing 16 bits on the bus.           */
 /***************************************************************/
@@ -406,7 +406,15 @@ int main(int argc, char *argv[]) {
 /***************************************************************/
 
 int fetch();
+int decode(int instr);
+int sext(int num, int bits);
 
+
+
+int handleALU(int instr, int op);
+
+
+void handleTRAP(int instr);
 
 
 
@@ -420,32 +428,173 @@ void process_instruction(){
    *       -Execute
    *       -Update NEXT_LATCHES
    */     
-
+    #if DEBUG
+    printf("************************************************\n");
 	printf("starting process\n");
-	int instruction = fetch();
+    printf("************************************************\n");
+	#endif
+    int instruction = fetch();
+    int opcode = decode(instruction);   
+    #if DEBUG
+    printf("Opcode = 0x%1x  (%i) \n",opcode, opcode);
+    #endif
+    
+    
+    switch(opcode){
+        case 1 :
+        case 5 :
+        case 9 : /* alu */
+            handleALU(instruction, opcode);
+            break;
+        case 0 : /* BR */
+            break;
+        case 14 : /* LEA */
+            break;
+        case 12 : /* JMP */
+            break;
+        case 8 : /* TODO RTI, don't do ??? */
+            printf("RTI Called, no simmulated handler\n");
+            break;
+        case 4 : /* JSR */
+            break;
+        case 2 :
+        case 6 :
+        case 3 :
+        case 7 : /* LD/ST */
+            break;
+        case 13 : /* SHF */
+            break;
+        case 15 : /* TRAP */ 
+            handleTRAP(instruction);
+            break;
+        default:
+            printf("error in decode: unknown opcode\n");
+            break;
 
 
 
-	exit(0);
+
+    }
+
+
+
 }
+
+
+int handleALU(int instr, int op){
+    #if DEBUG
+    printf("ALU handle\n");
+    #endif
+    int* DR; /* Destination Register */
+    int SR1, OPSPEC; /* operands */
+    int A = (instr >> 5) & 0x1;
+    
+    DR = &NEXT_LATCHES.REGS[ (instr >> 9) & 0x7 ];
+    SR1 = CURRENT_LATCHES.REGS[ (instr >> 6) & 0x7];
+    SR1 = Low16bits(SR1);
+
+    OPSPEC = (A) ? sext( (instr & 0x1F) , 5) : CURRENT_LATCHES.REGS[instr & 0x7];
+    printf("OPSPEC = 0x%4x =  %i\n",OPSPEC, OPSPEC);
+    OPSPEC = Low16bits(OPSPEC);
+    #if DEBUG
+    printf("DR = %i SR1 = %i A = %i, OPSPEC = %i \n",*DR, SR1, A, OPSPEC);
+    #endif
+    
+    switch(op){
+
+    case 1 : /* ADD */
+        *DR = SR1 + OPSPEC;
+        break;
+    case 5 : /* AND */
+        *DR = SR1 & OPSPEC;
+        break;
+    case 9 : /* XOR */
+        *DR = SR1 ^ OPSPEC;
+        break;
+    default : 
+        printf("Error in handleALU(): invalid opcode");
+        break;
+    }
+
+    *DR = Low16bits(*DR);
+
+
+    int nzp = 0;
+    if(*DR == 0){
+        nzp += 2;
+    }
+    if( ( (*DR) >> 15 ) == 1 ){
+        nzp += 4;
+    }
+    else{
+        nzp += 1;
+    }
+   
+    #if DEBUG
+    printf("DR = 0x%4x = %i, nzp = 0x%1x\n", *DR, *DR, nzp);
+    #endif
+    return nzp;
+
+    
+
+}
+
+
+void handleTRAP(int instr){
+    #if DEBUG
+    printf("TRAP handle\n");
+    #endif
+
+    NEXT_LATCHES.REGS[7] = NEXT_LATCHES.PC;    
+    NEXT_LATCHES.PC = MEMORY[( (instr & 0xFF) << 1)][0] + (MEMORY[( (instr & 0xFF) << 1)][1] << 8);
+    #if DEBUG
+    printf("PC at 0x%4x\n", NEXT_LATCHES.PC);
+    #endif
+}
+    
+
 
 
 
 int fetch(){
+	#if DEBUG
 	printf("address 0x%4x\n", CURRENT_LATCHES.PC);
-	int data = 0;
+	#endif
+    int data = 0;
 	data += MEMORY[CURRENT_LATCHES.PC >> 1][0];
 	data += MEMORY[CURRENT_LATCHES.PC >> 1][1] << 8;
-	printf("Memory = %4x", data);
-
+	#if DEBUG
+	printf("Memory = 0x%4x\n", data);
+	#endif
+	NEXT_LATCHES.PC += 2;
 	return data;
 }
 
 
 
+int decode(int instr){
+    return ( (instr >> 12) & 0xF);
+}
 
 
+int sext(int num, int bits){
+    int sign = (num >> (bits - 1)) & 0x1; 
+    
+    int ret;
+    ret = 0xFFFF << bits;
 
+    if(sign){
+        ret = ret | num;
+    }
+    else{
+        ret = (~ret) & num;
+    }
+
+    #if DEBUG
+    printf("sext: Original = 0x%4x, ret = 0x%4x\n", num, ret);
+    #endif
+    return ret;
+}
 
 
 
