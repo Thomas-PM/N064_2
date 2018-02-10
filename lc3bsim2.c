@@ -455,6 +455,7 @@ void process_instruction(){
             handleBR(instruction);
             break;
         case 14 : /* LEA */
+            handleLEA(instruction);
             break;
         case 12 : /* JMP */
             handleJMP(instruction);
@@ -565,14 +566,24 @@ void handleBR(int instr){
 
 void handleLEA(int instr){
     int* DR = &NEXT_LATCHES.REGS[ (instr >> 9) & 0x7];
+    
+    #if DEBUG
+    printf("LEA handle. DR = %i, load from memory 0x%4x \n", ( (instr >> 9) & 0x7),  Low16bits( NEXT_LATCHES.PC + ( sext( (instr & 0x1FF), 9) << 1) ) );
+    #endif
+    
     *DR = NEXT_LATCHES.PC + ( sext( (instr & 0x1FF), 9) << 1);
-
+    
+    *DR = Low16bits(*DR);
 }
 
 
 void handleJMP(int instr){
+    #if DEBUG
+    printf("Jump handle");
+    #endif
     NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[(instr >> 6) & 0x7];
-
+    
+    NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC);
 }
 
 
