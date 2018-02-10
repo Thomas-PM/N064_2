@@ -441,7 +441,7 @@ void process_instruction(){
     int instruction = fetch();
     int opcode = decode(instruction);   
     #if DEBUG
-    printf("Opcode = 0x%1x  (%i) \n",opcode, opcode);
+    printf("Opcode = 0x%1x\n*********\n", opcode);
     #endif
     
     
@@ -554,7 +554,11 @@ void handleBR(int instr){
     z = (instr >> 10) & 0x1;
     p = (instr >> 9) & 0x1;
     if( (CURRENT_LATCHES.N && n) || (CURRENT_LATCHES.Z && z) || (CURRENT_LATCHES.P && p) ){
-        NEXT_LATCHES.PC = NEXT_LATCHES.PC + (sext( (instr & 0x1FF), 9) << 1);
+        #if DEBUG
+        printf("Branching based on NZP = %1x%1x%1x, to offset %i which is location 0x%4x \n", n, z, p, sext ( (instr & 0x1FF), 9) , Low16bits(NEXT_LATCHES.PC +  (sext((instr & 0x1FF), 9) << 1) ) );
+        #endif
+        NEXT_LATCHES.PC = NEXT_LATCHES.PC + (sext( (instr & 0x1FF), 9) << 1 );
+        NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC);
     }
 
 }
@@ -567,7 +571,7 @@ void handleLEA(int instr){
 
 
 void handleJMP(int instr){
-    NEXT_LATCHES.PC = CURRENT_LATCHES.REG[(instr >> 6) & 0x7];
+    NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[(instr >> 6) & 0x7];
 
 }
 
@@ -575,18 +579,11 @@ void handleJMP(int instr){
 void handleJSR(int instr){
     int A = (instr >> 11) & 0x1;
     if(A){
-        NEXT_LATCH.PC = NEXT_LATCH.PC + ( (sext( (instr & 0x7FF) ,11) ) << 1);
+        NEXT_LATCHES.PC = NEXT_LATCHES.PC + ( (sext( (instr & 0x7FF) ,11) ) << 1);
     }
-    else{
-        NEXT_LATCH.PC = CURRENT_LATCHES.REGS[ (instr >> 6) & 0x7];
-    }
-
-}
-
-
-void handleLDST(int instr){ 
-    int ST = (instr >> 12) & 0x1; /*  1 = store, 0 = load  */
-    int W = (intsr >> 14) &0x1; /*  1 = word, 0 = byte  */
+    int W = (instr >> 14) &0x1; /*  1 = word, 0 = byte  */
+    int ST = 0;
+    
     int BaseR = CURRENT_LATCHES.REGS[(instr >> 6) & 0x7]; 
     BaseR = Low16bits(BaseR);
     int offset6 = sext( (instr & 0x3F), 6);
@@ -600,7 +597,7 @@ void handleLDST(int instr){
     }
     else{ /*  Load  */
         int* DR = &NEXT_LATCHES.REGS[ (instr >> 9) & 0x7];  
-        // TODO: Check Memory shifts for everything
+        /* TODO: Check Memory shifts for everything */
     }
 
 
@@ -675,11 +672,6 @@ int sext(int num, int bits){
     #endif
     return ret;
 }
-
-
-
-
-
 
 
 
