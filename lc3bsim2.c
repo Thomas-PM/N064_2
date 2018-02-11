@@ -464,7 +464,7 @@ void process_instruction(){
             printf("RTI Called, no simmulated handler\n");
             break;
         case 4 : /* JSR */
-            
+            handleJSR(instruction);            
             break;
         case 2 :
         case 6 :
@@ -588,6 +588,26 @@ void handleJMP(int instr){
 
 
 void handleJSR(int instr){
+    NEXT_LATCHES.REGS[7] = NEXT_LATCHES.PC;
+    int A = ( (instr >> 11) & 0x1); 
+    #if DEBUG
+    printf("JSR handle\n");
+    #endif
+
+    if(A){
+        NEXT_LATCHES.PC = NEXT_LATCHES.PC + ( sext((instr & 0x7FF) , 11) << 1);
+        printf("(JSR) Jumping to 0x%4x\n", NEXT_LATCHES.PC);
+    }
+    else{
+        int BaseR = CURRENT_LATCHES.REGS[(instr >> 6) & 0x7];
+        NEXT_LATCHES.PC = BaseR;
+        printf("(JSRR) Jumping to 0x%4x\n", NEXT_LATCHES.PC);
+    }
+    
+    NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC);
+}
+
+void handleLDST(int instr){
     int A = (instr >> 11) & 0x1;
     if(A){
         NEXT_LATCHES.PC = NEXT_LATCHES.PC + ( (sext( (instr & 0x7FF) ,11) ) << 1);
