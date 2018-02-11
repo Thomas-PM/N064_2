@@ -622,7 +622,23 @@ void handleLDST(int instr){
     printf("LDST handle. Memory address: 0x%4x\n", address);
 
     if(ST){ /*  Store  */
-        
+		#if DEBUG
+		printf("Store\n");
+		#endif
+       	int dataH =( CURRENT_LATCHES.REGS[ (instr >> 9) & 0x7 ] >> 8) & 0xFF;
+        int dataL =( CURRENT_LATCHES.REGS[ (instr >> 9) & 0x7 ]) & 0xFF;
+		#if DEBUG
+        printf("data: HI = 0x%2x, LO = 0x%2x\n", dataH, dataL);
+        #endif
+        if(W){  /* Word */
+	        MEMORY[address >> 1][0] = dataL;
+            MEMORY[address >> 1][1] = dataH;
+        }
+		else{ /* Byte */
+            int baddress = address & 0x1;
+            printf("byte number %i\n", baddress);
+            MEMORY[address >> 1][baddress] = dataL;
+		}		
     }
     else{ /*  Load  */
         #if DEBUG
