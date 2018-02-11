@@ -417,7 +417,8 @@ void handleBR(int instr);
 void handleLEA(int instr);
 void handleJMP(int instr);
 void handleJSR(int instr);
-
+void handleLDST(int instruction);       
+void handleSHF(int instruction);
 
 void handleTRAP(int instr);
 
@@ -470,10 +471,10 @@ void process_instruction(){
         case 6 :
         case 3 :
         case 7 : /* LD/ST */
-            
+            handleLDST(instruction);       
             break;
         case 13 : /* SHF */
-            
+            handleSHF(instruction); 
             break;
         case 15 : /* TRAP */ 
             handleTRAP(instruction);
@@ -608,35 +609,50 @@ void handleJSR(int instr){
 }
 
 void handleLDST(int instr){
-    int A = (instr >> 11) & 0x1;
-    if(A){
-        NEXT_LATCHES.PC = NEXT_LATCHES.PC + ( (sext( (instr & 0x7FF) ,11) ) << 1);
-    }
-    int W = (instr >> 14) &0x1; /*  1 = word, 0 = byte  */
-    int ST = 0;
+    int W = (instr >> 14) & 0x1; /*  1 = word, 0 = byte  */
+    int ST = (instr >> 12) & 0x1; /* 1 = Store, 0 = Load */
     
     int BaseR = CURRENT_LATCHES.REGS[(instr >> 6) & 0x7]; 
     BaseR = Low16bits(BaseR);
     int offset6 = sext( (instr & 0x3F), 6);
-    if(W){ /*  word  */
-        offset6 = offset6 << 1;
-    }
-    int address = BaseR + offset6;
+    if(W){
+		offset6 = offset6 << 1;
+	}
+    int address = Low16bits( BaseR + offset6);
+    printf("LDST handle. Memory address: 0x%4x\n", address);
 
     if(ST){ /*  Store  */
-
+        
     }
     else{ /*  Load  */
+        #if DEBUG
+        printf("Load\n");
+        #endif
         int* DR = &NEXT_LATCHES.REGS[ (instr >> 9) & 0x7];  
-        /* TODO: Check Memory shifts for everything */
+        if(W){ /* Word */
+            *DR = MEMORY[address >> 1][0] + (MEMORY[address >> 1][1] << 8);
+        }
+        else{ /* Byte */
+            int baddress = address & 0x1;
+			printf("byte number %i\n", baddress);
+            *DR = sext( MEMORY[address >> 1][baddress], 8);
+
+        }
+        *DR = Low16bits(*DR);
+        #if DEBUG
+        printf("Loaded 0x%4x into DR\n", *DR);
+        #endif
     }
 
 
 
 }
 
+void handleSHF(int instr){
 
 
+
+}
 
 
 void handleTRAP(int instr){
@@ -698,7 +714,7 @@ int sext(int num, int bits){
         ret = (~ret) & num;
     }
 
-    #if DEBUG
+    #if 0
     printf("sext: Original = 0x%4x, ret = 0x%4x\n", num, ret);
     #endif
     return ret;
